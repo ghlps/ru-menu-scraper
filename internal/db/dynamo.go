@@ -95,10 +95,7 @@ func (s *Store) GetLatestByDay(ctx context.Context, date string, ruCode string) 
 			":date": &types.AttributeValueMemberS{Value: date},
 			":ru":   &types.AttributeValueMemberS{Value: ruCode},
 		},
-		ScanIndexForward: aws.Bool(false),
-		Limit:            aws.Int32(1),
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("query latest execution for date %s: %w", date, err)
 	}
@@ -107,10 +104,17 @@ func (s *Store) GetLatestByDay(ctx context.Context, date string, ruCode string) 
 		return nil, nil
 	}
 
-	var execution models.ScraperExecution
-	if err := attributevalue.UnmarshalMap(out.Items[0], &execution); err != nil {
-		return nil, fmt.Errorf("unmarshal execution: %w", err)
+	var executions []models.ScraperExecution
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &executions); err != nil {
+		return nil, fmt.Errorf("unmarshal executions: %w", err)
 	}
 
-	return &execution, nil
+	latest := executions[0]
+	for _, e := range executions[1:] {
+		if e.CreatedAt.After(latest.CreatedAt) {
+			latest = e
+		}
+	}
+
+	return &latest, nil
 }
