@@ -36,7 +36,18 @@ func hashMenu(menu *models.Menu) (string, error) {
 		return "", fmt.Errorf("menu is nil")
 	}
 
+	meals := make(map[string][]models.Meal, len(menu.Meals))
+	for mealType, items := range menu.Meals {
+		stripped := make([]models.Meal, len(items))
+		for i, m := range items {
+			m.Changed = false
+			stripped[i] = m
+		}
+		meals[mealType] = stripped
+	}
+
 	menuCopy := *menu
+	menuCopy.Meals = meals
 
 	b, err := json.Marshal(menuCopy)
 	if err != nil {
