@@ -74,11 +74,16 @@ func hasAnyMeals(meals map[string][]models.Meal) bool {
 }
 
 func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string) {
+	log.Printf("Trying to parse and transverse the menu using the date %s", formattedDate)
 	c.OnHTML("div", func(e *colly.HTMLElement) {
 		foundDate := false
-
 		e.DOM.Children().Each(func(_ int, sel *goquery.Selection) {
 			strongText := strings.TrimSpace(sel.Find("strong").Text())
+
+			if foundDate && strings.Contains(strongText, "/") {
+				foundDate = false
+				return
+			}
 			if strings.Contains(strongText, formattedDate) {
 				foundDate = true
 				return
