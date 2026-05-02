@@ -13,10 +13,10 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type EventLambda struct {
-	RuCode     string `json:"ruCode"`
-	RunType    string `json:"runType"`
-	DateOffset int    `json:"dateOffset"`
+type Event struct {
+	RestaurantCode string `json:"ruCode"`
+	RunType        string `json:"runType"`
+	DateOffset     int    `json:"dateOffset"`
 }
 
 type Scraper struct {
@@ -35,12 +35,12 @@ func New(ctx context.Context, cfg *config.Config) (*Scraper, error) {
 	}, nil
 }
 
-func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu, error) {
+func (s *Scraper) Handle(ctx context.Context, event *Event) (*models.Menu, error) {
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using system env vars")
 	}
 
-	restaurantCode, err := models.ParseRestaurantCode(event.RuCode)
+	restaurantCode, err := models.ParseRestaurantCode(event.RestaurantCode)
 	if err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
@@ -62,9 +62,49 @@ func (s *Scraper) Handle(ctx context.Context, event *EventLambda) (*models.Menu,
 		},
 	}
 
-	return s.decider(ctx, &execution, timeToScrape)
+	return s.run(ctx, &execution, timeToScrape)
 }
 
-func (s *Scraper) decider(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
-	return s.runCheckup(ctx, execution, timeToScrape)
+func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
+	date := timeToScrape.Format("02/01/2006")
+
+	menuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
+	if err != nil {
+		return nil, fmt.Errorf("scrape failed: %w", err)
+	}
+
+	if menuData.Meals == nil {
+		log.Printf("No meal was found for this specific date")
+		return nil, nil
+	}
+
+	currentHash, err := hashMenu(&menuData)
+	if err != nil {
+		return nil, fmt.Errorf("hashing failed: %w", err)
+	}
+
+	lastExecution, err := s.store.GetLatestByDay(ctx, date, execution.Menu.Restaurant.Code.String())
+	if err != nil {
+		return nil, err
+	}
+
+	if lastExecution != nil {
+		if lastExecution.MenuHash == currentHash {
+			log.Printf("The menu didn't change %s, skipping...", date)
+			return nil, nil
+		}
+
+		markChangedMeals(lastExecution.Menu, &menuData)
+	}
+
+	menuData.Restaurant = execution.Menu.Restaurant
+	execution.Menu = &menuData
+	execution.MenuHash = currentHash
+	execution.Status = models.ExecutionStatusSuccess
+
+	if err := s.store.Save(ctx, *execution); err != nil {
+		return nil, fmt.Errorf("db save failed: %w", err)
+	}
+
+	return &menuData, nil
 }

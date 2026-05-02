@@ -35,18 +35,20 @@ func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Menu, 
 		}
 	})
 
-	return transverseDOM(dateToScrape, restaurant, c)
+	return traverseDOM(dateToScrape, restaurant, c)
 }
 
-func transverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.Menu, error) {
+func traverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.Menu, error) {
+	formattedDate := dateScraped.Format("02/01/2006")
+
 	state := &scrapeState{
 		payload: models.Menu{
-			Date:  getFormattedDate(dateScraped),
+			Date:  formattedDate,
 			Meals: make(map[string][]models.Meal),
 		},
 	}
 
-	state.parseMenuForDate(c, getFormattedDate(dateScraped))
+	state.parseMenuForDate(c, formattedDate)
 
 	c.OnScraped(func(r *colly.Response) {
 		state.saveMeals()
@@ -92,7 +94,7 @@ func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string)
 			if foundDate && sel.Is("figure.wp-block-table") {
 				sel.Find("tr").Each(func(_ int, row *goquery.Selection) {
 					row.Find("td").Each(func(_ int, cell *goquery.Selection) {
-						s.processCellGoquery(cell)
+						s.processHTMLCell(cell)
 					})
 				})
 				foundDate = false
@@ -101,19 +103,15 @@ func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string)
 	})
 }
 
-func (s *scrapeState) processCellGoquery(cell *goquery.Selection) {
+func (s *scrapeState) processHTMLCell(cell *goquery.Selection) {
 	htmlContent := strings.ToUpper(strings.TrimSpace(cell.Text()))
 
 	if isMealType(htmlContent) {
 		s.saveMeals()
-		s.currentMealType = mapMealType(htmlContent)
+		s.currentMealType = parseMealType(htmlContent)
 		return
 	}
 
-	s.parseMealItemsGoquery(cell)
-}
-
-func (s *scrapeState) parseMealItemsGoquery(cell *goquery.Selection) {
 	cellHTML, err := cell.Html()
 	if err != nil {
 		log.Printf("Error getting cell HTML: %v", err)
@@ -133,5 +131,21 @@ func (s *scrapeState) parseMealItemsGoquery(cell *goquery.Selection) {
 
 		log.Printf("Adding meal: %s | icons: %v", meal.Name, meal.Icons)
 		s.mealOptions = append(s.mealOptions, meal)
+	}
+}
+
+type scrapeState struct {
+	dateFound       bool
+	tableFound      bool
+	currentMealType string
+	mealOptions     []models.Meal
+	payload         models.Menu
+}
+
+func (s *scrapeState) saveMeals() {
+	if len(s.mealOptions) > 0 {
+		log.Printf("Saving meals for: %s", s.currentMealType)
+		s.payload.Meals[s.currentMealType] = s.mealOptions
+		s.mealOptions = nil
 	}
 }

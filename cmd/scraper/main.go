@@ -28,12 +28,12 @@ func main() {
 			log.Fatalf("failed to read event.json: %v", err)
 		}
 
-		var event scraper.EventLambda
+		var event scraper.Event
 		if err := json.Unmarshal(data, &event); err != nil {
 			log.Fatalf("failed to parse event.json: %v", err)
 		}
 
-		log.Printf("Starting local scrape for: %s", event.RuCode)
+		log.Printf("Starting local scrape for: %s", event.RestaurantCode)
 		result, err := svc.Handle(ctx, &event)
 		if err != nil {
 			log.Fatalf("Execution failed: %v", err)

@@ -1,40 +1,11 @@
 package scraper
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"slices"
-	"time"
 
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
-
-func (s *Scraper) scrapeAndSave(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
-	menuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
-	if err != nil {
-		execution.Status = models.ExecutionStatusFailed
-		if saveErr := s.store.Save(ctx, *execution); saveErr != nil {
-			log.Printf("failed to save failed execution: %v", saveErr)
-		}
-		return nil, fmt.Errorf("scrape failed: %w", err)
-	}
-
-	menuHash, err := hashMenu(&menuData)
-	if err != nil {
-		return nil, fmt.Errorf("hashing failed: %w", err)
-	}
-
-	menuData.Restaurant = execution.Menu.Restaurant
-	execution.Menu = &menuData
-	execution.MenuHash = menuHash
-	execution.Status = models.ExecutionStatusSuccess
-
-	if err := s.store.Save(ctx, *execution); err != nil {
-		return nil, fmt.Errorf("db save failed: %w", err)
-	}
-	return &menuData, nil
-}
 
 func indexMeals(meals []models.Meal) map[string]models.Meal {
 	idx := make(map[string]models.Meal, len(meals))

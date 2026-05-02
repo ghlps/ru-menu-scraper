@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"os"
 
 	appconfig "github.com/ghlps/poc-go-scraper/internal/config"
 
@@ -25,7 +24,7 @@ type Store struct {
 func NewStore(ctx context.Context, cfgApp appconfig.Config) (*Store, error) {
 	var client *dynamodb.Client
 
-	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") == "" {
+	if cfgApp.IsDev {
 		cfg, err := config.LoadDefaultConfig(ctx,
 			config.WithRegion("us-east-1"),
 			config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("dummy", "dummy", "")),
@@ -38,6 +37,7 @@ func NewStore(ctx context.Context, cfgApp appconfig.Config) (*Store, error) {
 		client = dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
 			o.BaseEndpoint = aws.String(cfgApp.DynamoURL)
 		})
+
 	} else {
 		cfg, err := config.LoadDefaultConfig(ctx)
 		if err != nil {
@@ -64,26 +64,6 @@ func (s *Store) Save(ctx context.Context, data models.ScraperExecution) error {
 	}
 
 	return nil
-}
-
-func (s *Store) HasFailedExecutionForDate(ctx context.Context, date string) (bool, error) {
-	out, err := s.client.Scan(ctx, &dynamodb.ScanInput{
-		TableName:        aws.String(tableName),
-		FilterExpression: aws.String("begins_with(created_at, :date) AND #st = :status"),
-		ExpressionAttributeNames: map[string]string{
-			"#st": "status",
-		},
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":date":   &types.AttributeValueMemberS{Value: date},
-			":status": &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", models.ExecutionStatusFailed)},
-		},
-		Limit: aws.Int32(1),
-	})
-	if err != nil {
-		return false, fmt.Errorf("scan failed executions for date %s: %w", date, err)
-	}
-
-	return len(out.Items) > 0, nil
 }
 
 func (s *Store) GetLatestByDay(ctx context.Context, date string, ruCode string) (*models.ScraperExecution, error) {
