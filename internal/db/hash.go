@@ -1,4 +1,4 @@
-package scraper
+package db
 
 import (
 	"crypto/sha256"
@@ -9,7 +9,7 @@ import (
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
-func hashMenu(menu *models.Menu) (string, error) {
+func HashMenu(menu *models.Menu) (string, error) {
 	if menu == nil {
 		return "", fmt.Errorf("menu is nil")
 	}

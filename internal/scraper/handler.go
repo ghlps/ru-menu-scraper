@@ -47,13 +47,14 @@ func (s *Scraper) Handle(ctx context.Context, event *Event) (*models.Menu, error
 
 	restaurant := models.NewRestaurant(restaurantCode)
 	timeToScrape := time.Now().AddDate(0, 0, event.DateOffset)
+	formattedDateToScrape := timeToScrape.Format("02/01/2006")
 
 	fmt.Println(restaurant)
 
 	execution := models.ScraperExecution{
 		ExecutionId:    uuid.New().String(),
 		RestaurantCode: restaurantCode.String(),
-		MenuDate:       timeToScrape.Format("02/01/2006"),
+		MenuDate:       formattedDateToScrape,
 		CreatedAt:      time.Now(),
 		ExpiresAt:      time.Now().Add(72 * time.Hour).Unix(),
 		Menu: &models.Menu{
@@ -62,12 +63,10 @@ func (s *Scraper) Handle(ctx context.Context, event *Event) (*models.Menu, error
 		},
 	}
 
-	return s.run(ctx, &execution, timeToScrape)
+	return s.run(ctx, &execution, formattedDateToScrape)
 }
 
-func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, timeToScrape time.Time) (*models.Menu, error) {
-	date := timeToScrape.Format("02/01/2006")
-
+func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, timeToScrape string) (*models.Menu, error) {
 	menuData, err := scrape(timeToScrape, *execution.Menu.Restaurant)
 	if err != nil {
 		return nil, fmt.Errorf("scrape failed: %w", err)
@@ -78,19 +77,19 @@ func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, t
 		return nil, nil
 	}
 
-	currentHash, err := hashMenu(&menuData)
+	currentHash, err := db.HashMenu(&menuData)
 	if err != nil {
 		return nil, fmt.Errorf("hashing failed: %w", err)
 	}
 
-	lastExecution, err := s.store.GetLatestByDay(ctx, date, execution.Menu.Restaurant.Code.String())
+	lastExecution, err := s.store.GetLatestByDay(ctx, timeToScrape, execution.Menu.Restaurant.Code.String())
 	if err != nil {
 		return nil, err
 	}
 
 	if lastExecution != nil {
 		if lastExecution.MenuHash == currentHash {
-			log.Printf("The menu didn't change %s, skipping...", date)
+			log.Printf("The menu didn't change %s, skipping...", timeToScrape)
 			return nil, nil
 		}
 

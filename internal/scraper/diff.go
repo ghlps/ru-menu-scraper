@@ -7,7 +7,7 @@ import (
 	"github.com/ghlps/poc-go-scraper/internal/models"
 )
 
-func indexMeals(meals []models.Meal) map[string]models.Meal {
+func mealsByName(meals []models.Meal) map[string]models.Meal {
 	idx := make(map[string]models.Meal, len(meals))
 	for _, m := range meals {
 		idx[m.Name] = m
@@ -15,7 +15,7 @@ func indexMeals(meals []models.Meal) map[string]models.Meal {
 	return idx
 }
 
-func mealChanged(prev, curr models.Meal) bool {
+func isMealChanged(prev, curr models.Meal) bool {
 	if prev.Name != curr.Name {
 		return true
 	}
@@ -37,11 +37,11 @@ func markChangedMeals(previous, current *models.Menu) {
 			continue
 		}
 
-		prevIdx := indexMeals(previousMeals)
+		prevIdx := mealsByName(previousMeals)
 		changed := false
 		for i, meal := range currentMeals {
 			prevMeal, existed := prevIdx[meal.Name]
-			if !existed || mealChanged(prevMeal, meal) {
+			if !existed || isMealChanged(prevMeal, meal) {
 				currentMeals[i].Changed = true
 				changed = true
 			}

@@ -12,7 +12,7 @@ import (
 	"github.com/gocolly/colly/v2"
 )
 
-func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Menu, error) {
+func scrape(dateToScrape string, restaurant models.Restaurant) (models.Menu, error) {
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
@@ -38,17 +38,16 @@ func scrape(dateToScrape time.Time, restaurant models.Restaurant) (models.Menu, 
 	return traverseDOM(dateToScrape, restaurant, c)
 }
 
-func traverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.Collector) (models.Menu, error) {
-	formattedDate := dateScraped.Format("02/01/2006")
+func traverseDOM(dateScraped string, restaurant models.Restaurant, c *colly.Collector) (models.Menu, error) {
 
 	state := &scrapeState{
 		payload: models.Menu{
-			Date:  formattedDate,
+			Date:  dateScraped,
 			Meals: make(map[string][]models.Meal),
 		},
 	}
 
-	state.parseMenuForDate(c, formattedDate)
+	state.parseMenuForDate(c, dateScraped)
 
 	c.OnScraped(func(r *colly.Response) {
 		state.saveMeals()
@@ -59,20 +58,11 @@ func traverseDOM(dateScraped time.Time, restaurant models.Restaurant, c *colly.C
 		return models.Menu{}, fmt.Errorf("visit page: %w", err)
 	}
 
-	if !hasAnyMeals(state.payload.Meals) {
+	if len(state.payload.Meals) == 0 {
 		return models.Menu{}, nil
-	} else {
-		return state.payload, nil
 	}
-}
 
-func hasAnyMeals(meals map[string][]models.Meal) bool {
-	for _, items := range meals {
-		if len(items) > 0 {
-			return true
-		}
-	}
-	return false
+	return state.payload, nil
 }
 
 func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string) {
@@ -131,21 +121,5 @@ func (s *scrapeState) processHTMLCell(cell *goquery.Selection) {
 
 		log.Printf("Adding meal: %s | icons: %v", meal.Name, meal.Icons)
 		s.mealOptions = append(s.mealOptions, meal)
-	}
-}
-
-type scrapeState struct {
-	dateFound       bool
-	tableFound      bool
-	currentMealType string
-	mealOptions     []models.Meal
-	payload         models.Menu
-}
-
-func (s *scrapeState) saveMeals() {
-	if len(s.mealOptions) > 0 {
-		log.Printf("Saving meals for: %s", s.currentMealType)
-		s.payload.Meals[s.currentMealType] = s.mealOptions
-		s.mealOptions = nil
 	}
 }
