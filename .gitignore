@@ -2,3 +2,4 @@ bootstrap
 deployment.zip
 dynamodb-data/
 .vscode
+.env
