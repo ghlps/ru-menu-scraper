@@ -21,6 +21,7 @@ const (
 	POL
 	BOT
 	CEN
+	TST
 	AGR
 )
 
@@ -41,6 +42,8 @@ func (r RestaurantCode) String() string {
 	case CEN:
 		return "CEN"
 	case AGR:
+		return "AGR"
+	case TST:
 		return "AGR"
 	default:
 		return "UNKNOWN"
@@ -90,6 +93,8 @@ func (r RestaurantCode) UrlAddress() string {
 		return base + "/cardapio-ru-central/"
 	case AGR:
 		return base + "/cardapio-ru-agrarias/"
+	case TST:
+		return base + "/cardapio-ru-central/"
 	default:
 		return base
 	}
@@ -105,6 +110,8 @@ func ParseRestaurantCode(s string) (RestaurantCode, error) {
 		return CEN, nil
 	case "AGR":
 		return AGR, nil
+	case "TST":
+		return CEN, nil
 	default:
 		return UnknownRU, fmt.Errorf("invalid code: %s", s)
 	}
