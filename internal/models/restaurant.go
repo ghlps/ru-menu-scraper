@@ -80,7 +80,7 @@ func (r RestaurantCode) FullName() string {
 }
 
 func (r RestaurantCode) UrlAddress() string {
-	const base = "https://p4e.ufpr.br/ru	"
+	const base = "https://p4e.ufpr.br/ru"
 	switch r {
 	case POL:
 		return base + "/cardapio-ru-centro-politecnico/"
