@@ -74,10 +74,28 @@ func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, t
 
 	menuData.Restaurant = execution.Menu.Restaurant
 
+	lastExecution, err := s.store.GetLatestByDay(ctx, timeToScrape, execution.Menu.Restaurant.Code.String())
+	if err != nil {
+		log.Printf("Warning: failed to query latest execution: %v - returning scraped data anyway", err)
+		return &menuData, fmt.Errorf("db query failed: %w", err)
+	}
+
 	if len(menuData.Meals) == 0 {
 		if menuData.ImgMenu == nil {
 			log.Printf("No meal was found for this specific date and no image captured")
 			return nil, nil
+		}
+
+		if lastExecution != nil && lastExecution.Menu.ImgMenu != nil {
+			log.Printf("Image already sent for %s, skipping", timeToScrape)
+			return nil, nil
+		}
+
+		execution.Menu = &menuData
+		execution.Status = models.ExecutionStatusSuccess
+		if err := s.store.Save(ctx, *execution); err != nil {
+			log.Printf("Warning: failed to save image execution: %v", err)
+			return &menuData, fmt.Errorf("db save failed: %w", err)
 		}
 		log.Printf("No meals found, but image captured - returning result")
 		return &menuData, nil
@@ -89,16 +107,10 @@ func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, t
 		return &menuData, fmt.Errorf("hashing failed: %w", err)
 	}
 
-	lastExecution, err := s.store.GetLatestByDay(ctx, timeToScrape, execution.Menu.Restaurant.Code.String())
-	if err != nil {
-		log.Printf("Warning: failed to query latest execution: %v - returning scraped data anyway", err)
-		return &menuData, fmt.Errorf("db query failed: %w", err)
-	}
-
 	if lastExecution != nil {
 		if lastExecution.MenuHash == currentHash {
 			log.Printf("The menu didn't change %s, skipping save...", timeToScrape)
-			return &menuData, nil
+			return nil, nil
 		}
 
 		markChangedMeals(lastExecution.Menu, &menuData)

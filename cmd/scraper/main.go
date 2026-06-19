@@ -36,7 +36,6 @@ func main() {
 		log.Printf("Starting local scrape for: %s", event.RestaurantCode)
 		result, err := svc.Handle(ctx, &event)
 
-		// Always print the result if we got one
 		if result != nil {
 			out, marshalErr := json.MarshalIndent(result, "", "  ")
 			if marshalErr != nil {
@@ -45,14 +44,13 @@ func main() {
 			fmt.Println(string(out))
 		}
 
-		// Handle any errors
 		if err != nil {
 			log.Printf("Execution encountered error: %v", err)
 			if result == nil {
 				os.Exit(1)
 			}
 		} else {
-			log.Println("Local execution finished successfully")
+			log.Println("Nothing to do, skipping (already sent or no menu found)")
 		}
 	} else {
 		lambda.Start(svc.Handle)
