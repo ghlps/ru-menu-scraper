@@ -44,7 +44,7 @@ func (r RestaurantCode) String() string {
 	case AGR:
 		return "AGR"
 	case TST:
-		return "AGR"
+		return "TST"
 	default:
 		return "UNKNOWN"
 	}
@@ -77,6 +77,8 @@ func (r RestaurantCode) FullName() string {
 		return "Central"
 	case AGR:
 		return "Agrárias"
+	case TST:
+		return "TESTE"
 	default:
 		return "Unidade Desconhecida"
 	}
@@ -111,7 +113,7 @@ func ParseRestaurantCode(s string) (RestaurantCode, error) {
 	case "AGR":
 		return AGR, nil
 	case "TST":
-		return CEN, nil
+		return TST, nil
 	default:
 		return UnknownRU, fmt.Errorf("invalid code: %s", s)
 	}
