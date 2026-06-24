@@ -103,11 +103,7 @@ func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string,
 					})
 				})
 				mealsAfter := len(s.mealOptions)
-
-				hasRealContent := mealsAfter > mealsBefore
-				if hasRealContent {
-					foundDate = false
-				}
+				_ = mealsAfter > mealsBefore
 			}
 
 			if foundDate && sel.Is("div") {
