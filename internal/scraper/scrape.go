@@ -96,23 +96,24 @@ func (s *scrapeState) parseMenuForDate(c *colly.Collector, formattedDate string,
 			}
 
 			if foundDate && sel.Is("figure.wp-block-table") {
-				mealsBefore := len(s.mealOptions)
 				sel.Find("tr").Each(func(_ int, row *goquery.Selection) {
 					row.Find("td").Each(func(_ int, cell *goquery.Selection) {
 						s.processHTMLCell(cell)
 					})
 				})
-				mealsAfter := len(s.mealOptions)
-				_ = mealsAfter > mealsBefore
+
+				next := sel.Next()
+				if next.Is("div") {
+					if img := next.Find("img"); img.Length() > 0 {
+						src, _ := img.Attr("src")
+						s.uploadAndStoreImage(src, formattedDate, ruCode)
+					}
+				}
+
+				foundDate = false
+				return
 			}
 
-			if foundDate && sel.Is("div") {
-				if img := sel.Find("img"); img.Length() > 0 {
-					src, _ := img.Attr("src")
-					s.uploadAndStoreImage(src, formattedDate, ruCode)
-					foundDate = false
-				}
-			}
 		})
 	})
 }
