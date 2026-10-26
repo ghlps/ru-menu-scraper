@@ -3,6 +3,7 @@ package scraper
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -32,6 +33,10 @@ func scrape(dateToScrape string, restaurant models.Restaurant) (models.Menu, err
 	c := colly.NewCollector(
 		colly.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"),
 	)
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	c.WithTransport(transport)
 
 	c.SetRequestTimeout(15 * time.Second)
 
