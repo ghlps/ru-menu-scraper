@@ -8,7 +8,8 @@ type Menu struct {
 }
 
 type Meal struct {
-	Name    string   `json:"name"  dynamodbav:"name"`
-	Icons   []string `json:"icons" dynamodbav:"icons"`
-	Changed bool     `json:"changed" dynamodbav:"changed"`
+	Name     string   `json:"name"  dynamodbav:"name"`
+	Calories string   `json:"calories" dynamodbav:"calories"`
+	Icons    []string `json:"icons" dynamodbav:"icons"`
+	Changed  bool     `json:"changed" dynamodbav:"changed"`
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/ghlps/poc-go-scraper/internal/ai"
 	"github.com/ghlps/poc-go-scraper/internal/config"
 	"github.com/ghlps/poc-go-scraper/internal/db"
 	"github.com/ghlps/poc-go-scraper/internal/models"
@@ -115,6 +116,8 @@ func (s *Scraper) run(ctx context.Context, execution *models.ScraperExecution, t
 
 		markChangedMeals(lastExecution.Menu, &menuData)
 	}
+
+	ai.GetCaloriesFromMeals(&menuData.Meals)
 
 	execution.Menu = &menuData
 	execution.MenuHash = currentHash
