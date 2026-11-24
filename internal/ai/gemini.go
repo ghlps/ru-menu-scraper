@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/ghlps/poc-go-scraper/internal/models"
 	"google.golang.org/genai"
@@ -100,14 +101,31 @@ func GetCaloriesFromMeals(meals *map[string][]models.Meal) {
 	%s
 	`, string(menuBytes))
 
-	res, err := client.Models.GenerateContent(
-		ctx,
-		"gemini-3.1-flash-lite",
-		genai.Text(prompt),
-		&genai.GenerateContentConfig{
-			ResponseMIMEType: "application/json",
-		},
-	)
+	modelList := os.Getenv("GEMINI_MODELS")
+	if modelList == "" {
+		modelList = "gemini-3.5-flash-lite,gemini-3.1-flash-lite"
+	}
+
+	var res *genai.GenerateContentResponse
+
+	for _, model := range strings.Split(modelList, ",") {
+		model = strings.TrimSpace(model)
+		res, err = client.Models.GenerateContent(
+			ctx,
+			model,
+			genai.Text(prompt),
+			&genai.GenerateContentConfig{
+				ResponseMIMEType: "application/json",
+			},
+		)
+
+		if err == nil {
+			break
+		}
+
+		log.Printf("model %q failed: %v", model, err)
+	}
+
 	if err != nil {
 		log.Printf("procceding with the menu without calories: %v", err)
 		return
